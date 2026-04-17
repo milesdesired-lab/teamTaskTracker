@@ -1,0 +1,890 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
+  <title>Team Tasks</title>
+  <meta name="theme-color" content="#0c0c0c"/>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono&display=swap" rel="stylesheet"/>
+  <style>
+    :root {
+      --bg: #0c0c0c; --surface: #161616; --surface2: #1e1e1e;
+      --border: rgba(255,255,255,0.06); --border2: rgba(255,255,255,0.12);
+      --text: #eae7e1; --muted: #807c76; --accent: #7dd3fc;
+      --accent2: #38bdf8; --accent-bg: rgba(125,211,252,0.08);
+      --today-c: #60a5fa; --today-bg: rgba(96,165,250,0.1);
+      --dated-c: #fbbf24; --dated-bg: rgba(251,191,36,0.1);
+      --urgent-c: #fb7185; --urgent-bg: rgba(251,113,133,0.1);
+      --overdue-c: #f87171; --overdue-bg: rgba(248,113,113,0.1);
+      --done-c: #4ade80; --done-bg: rgba(74,222,128,0.1);
+      --pending-c: #a78bfa; --pending-bg: rgba(167,139,250,0.1);
+      --r: 12px; --rs: 8px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100dvh; }
+    .app { max-width: 520px; margin: 0 auto; padding-bottom: 100px; }
+    .hidden { display: none !important; }
+
+    /* ── Auth screen ── */
+    .auth { padding: 60px 24px 40px; text-align: center; }
+    .auth-logo { font-size: 28px; font-weight: 600; letter-spacing: -.03em; margin-bottom: 4px; }
+    .auth-logo span { color: var(--accent); }
+    .auth-sub { font-size: 12px; color: var(--muted); margin-bottom: 32px; }
+    .auth-tabs { display: flex; gap: 0; margin-bottom: 24px; border-radius: var(--rs); overflow: hidden; border: 1px solid var(--border2); }
+    .auth-tab {
+      flex: 1; padding: 10px; font-size: 13px; font-weight: 500; cursor: pointer;
+      background: transparent; border: none; color: var(--muted); font-family: inherit; transition: all .2s;
+    }
+    .auth-tab.active { background: var(--accent-bg); color: var(--accent); }
+    .auth-form { display: flex; flex-direction: column; gap: 10px; }
+    .auth-input {
+      background: var(--surface); border: 1px solid var(--border2); border-radius: var(--rs);
+      padding: 12px 14px; color: var(--text); font-size: 14px; font-family: inherit; outline: none;
+    }
+    .auth-input:focus { border-color: var(--accent); }
+    .auth-input::placeholder { color: var(--muted); }
+    .auth-btn {
+      padding: 12px; border-radius: var(--rs); border: none; cursor: pointer;
+      font-size: 14px; font-weight: 600; font-family: inherit;
+      background: var(--accent); color: #0c0c0c; transition: opacity .2s;
+    }
+    .auth-btn:active { opacity: .8; }
+    .auth-err { font-size: 12px; color: var(--urgent-c); min-height: 18px; margin-top: 4px; }
+    .auth-divider { font-size: 11px; color: var(--muted); margin: 16px 0 12px; }
+
+    /* ── Header ── */
+    .header { padding: 48px 20px 12px; border-bottom: 1px solid var(--border); }
+    .header-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 2px; }
+    .greeting { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+    .logout-btn {
+      font-size: 11px; color: var(--muted); background: none; border: 1px solid var(--border2);
+      border-radius: 4px; padding: 3px 8px; cursor: pointer; font-family: inherit;
+    }
+    .logout-btn:active { color: var(--urgent-c); border-color: var(--urgent-c); }
+    .title { font-size: 24px; font-weight: 600; letter-spacing: -.03em; }
+    .title span { color: var(--accent); }
+    .dateline { font-size: 11px; color: var(--muted); font-family: 'DM Mono', monospace; margin-top: 2px; }
+    .team-info { font-size: 11px; color: var(--muted); font-family: 'DM Mono', monospace; margin-top: 2px; }
+    .team-info code { color: var(--accent); }
+
+    /* ── Leader tabs ── */
+    .leader-tabs { display: flex; gap: 0; margin: 12px 20px 0; border-radius: var(--rs); overflow: hidden; border: 1px solid var(--border2); }
+    .ltab {
+      flex: 1; padding: 8px; font-size: 12px; font-weight: 500; cursor: pointer;
+      background: transparent; border: none; color: var(--muted); font-family: inherit; transition: all .2s;
+    }
+    .ltab.active { background: var(--accent-bg); color: var(--accent); }
+
+    /* ── Stats ── */
+    .stats { display: flex; gap: 8px; padding: 12px 20px; }
+    .stat { flex: 1; background: var(--surface); border: 1px solid var(--border); border-radius: var(--rs); padding: 8px 10px; }
+    .stat-n { font-size: 18px; font-weight: 600; letter-spacing: -.04em; }
+    .stat-n.t { color: var(--today-c); }
+    .stat-n.u { color: var(--urgent-c); }
+    .stat-n.p { color: var(--pending-c); }
+    .stat-l { font-size: 10px; color: var(--muted); margin-top: 1px; }
+
+    /* ── Add section ── */
+    .add-section { padding: 4px 20px 10px; }
+    .row1 { display: flex; gap: 8px; margin-bottom: 8px; }
+    .add-input {
+      flex: 1; background: var(--surface); border: 1px solid var(--border2);
+      border-radius: var(--rs); padding: 0 12px; height: 42px;
+      color: var(--text); font-size: 14px; font-family: inherit; outline: none;
+    }
+    .add-input:focus { border-color: var(--accent); }
+    .add-input::placeholder { color: var(--muted); }
+    .add-btn {
+      height: 42px; padding: 0 16px; border-radius: var(--rs);
+      background: var(--accent); border: none; cursor: pointer;
+      font-size: 14px; font-weight: 600; color: #0c0c0c; font-family: inherit;
+    }
+    .add-btn:active { opacity: .8; transform: scale(.97); }
+    .row2 { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    .sel {
+      background: var(--surface); border: 1px solid var(--border2);
+      border-radius: var(--rs); padding: 0 8px; height: 34px;
+      color: var(--text); font-size: 12px; font-family: inherit; outline: none; cursor: pointer;
+    }
+    .date-inp, .time-inp {
+      background: var(--surface); border: 1px solid var(--border2);
+      border-radius: var(--rs); padding: 0 8px; height: 34px;
+      color: var(--text); font-size: 12px; font-family: 'DM Mono', monospace; outline: none; display: none;
+    }
+    .date-inp.show, .time-inp.show { display: block; }
+    .urgent-lbl {
+      display: flex; align-items: center; gap: 5px; cursor: pointer;
+      font-size: 11px; color: var(--muted); user-select: none; margin-left: auto;
+    }
+    .urgent-lbl input { display: none; }
+    .udot { width: 13px; height: 13px; border-radius: 50%; border: 1.5px solid var(--border2); transition: all .2s; }
+    .urgent-lbl input:checked ~ .udot { background: var(--urgent-c); border-color: var(--urgent-c); }
+
+    /* ── Filters ── */
+    .filters { display: flex; gap: 5px; padding: 0 20px 12px; overflow-x: auto; scrollbar-width: none; }
+    .filters::-webkit-scrollbar { display: none; }
+    .fbtn {
+      flex-shrink: 0; padding: 4px 11px; border-radius: 16px;
+      font-size: 11px; font-weight: 500; border: 1px solid var(--border);
+      background: transparent; color: var(--muted); cursor: pointer; font-family: inherit;
+    }
+    .fbtn.active { background: var(--accent-bg); color: var(--accent); border-color: var(--accent); }
+
+    /* ── Task list ── */
+    .sec-head { display: flex; align-items: center; gap: 8px; padding: 6px 20px; margin-top: 4px; }
+    .sec-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+    .sec-lbl { font-size: 10px; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; }
+    .sec-cnt { font-size: 10px; color: var(--muted); margin-left: auto; font-family: 'DM Mono', monospace; }
+    .tlist { padding: 0 20px; display: flex; flex-direction: column; gap: 6px; margin-bottom: 4px; }
+
+    .task {
+      display: flex; align-items: flex-start; gap: 10px;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--r); padding: 10px 12px; transition: opacity .2s;
+    }
+    .task.is-urgent { border-left: 2.5px solid var(--urgent-c); }
+    .task.is-overdue { border-left: 2.5px solid var(--overdue-c); }
+    .task.is-pending { border-left: 2.5px solid var(--pending-c); opacity: .6; }
+    .task.is-done { opacity: .3; }
+    .task.is-done .task-text { text-decoration: line-through; color: var(--muted); }
+
+    .chk {
+      width: 18px; height: 18px; border-radius: 50%; flex-shrink: 0;
+      border: 1.5px solid var(--border2); background: transparent; cursor: pointer;
+      display: flex; align-items: center; justify-content: center; margin-top: 1px; transition: all .2s;
+    }
+    .chk.on { background: var(--done-c); border-color: var(--done-c); }
+    .chk.on::after {
+      content: ''; width: 4px; height: 8px;
+      border: 2px solid #0c0c0c; border-top: none; border-left: none;
+      transform: rotate(45deg) translateY(-1px); display: block;
+    }
+
+    .task-body { flex: 1; min-width: 0; }
+    .task-text { font-size: 13px; line-height: 1.4; word-break: break-word; }
+    .task-meta { display: flex; align-items: center; gap: 4px; margin-top: 4px; flex-wrap: wrap; }
+    .badge {
+      font-size: 9px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase;
+      padding: 2px 5px; border-radius: 3px;
+    }
+    .badge-urgent { color: var(--urgent-c); background: var(--urgent-bg); }
+    .badge-overdue { color: var(--overdue-c); background: var(--overdue-bg); }
+    .badge-pending { color: var(--pending-c); background: var(--pending-bg); }
+    .badge-date { font-size: 10px; font-family: 'DM Mono', monospace; color: var(--muted); font-weight: 400; text-transform: none; letter-spacing: 0; }
+    .badge-time { font-size: 10px; font-family: 'DM Mono', monospace; color: var(--today-c); background: var(--today-bg); font-weight: 400; text-transform: none; letter-spacing: 0; }
+    .badge-member { font-size: 10px; color: var(--accent); background: var(--accent-bg); font-weight: 500; text-transform: none; letter-spacing: 0; }
+
+    .task-actions { display: flex; gap: 2px; flex-shrink: 0; }
+    .act-btn {
+      width: 26px; height: 26px; border-radius: 5px; border: none;
+      background: transparent; color: var(--muted); cursor: pointer; font-size: 14px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .act-btn:active { background: var(--surface2); }
+    .act-btn.approve:active { color: var(--done-c); }
+    .act-btn.reject:active { color: var(--urgent-c); }
+    .act-btn.del:active { color: var(--urgent-c); }
+
+    .empty { text-align: center; padding: 32px 20px; color: var(--muted); font-size: 13px; }
+
+    /* ── Settings panel ── */
+    .settings-box { margin: 12px 20px 0; background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); padding: 14px 16px; }
+    .settings-head { font-size: 12px; font-weight: 500; margin-bottom: 10px; display: flex; align-items: center; gap: 6px; }
+    .settings-row { display: flex; align-items: center; justify-content: space-between; font-size: 12px; color: var(--muted); padding: 6px 0; }
+    .toggle {
+      position: relative; width: 36px; height: 20px; border-radius: 10px;
+      background: var(--border2); cursor: pointer; transition: background .2s;
+    }
+    .toggle.on { background: var(--accent); }
+    .toggle::after {
+      content: ''; position: absolute; top: 2px; left: 2px;
+      width: 16px; height: 16px; border-radius: 50%; background: #fff; transition: transform .2s;
+    }
+    .toggle.on::after { transform: translateX(16px); }
+    .settings-code { font-family: 'DM Mono', monospace; color: var(--accent); font-size: 13px; font-weight: 500; user-select: all; }
+    .settings-members { margin-top: 8px; }
+    .member-row { display: flex; align-items: center; gap: 8px; font-size: 12px; padding: 4px 0; border-bottom: 1px solid var(--border); }
+    .member-row:last-child { border-bottom: none; }
+    .member-name { flex: 1; }
+    .member-role { font-size: 10px; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; }
+    .member-wa { font-size: 10px; color: var(--muted); font-family: 'DM Mono', monospace; }
+
+    /* ── WA setup ── */
+    .wa-setup { margin: 12px 20px 0; background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); padding: 14px 16px; }
+    .wa-setup-head { font-size: 12px; font-weight: 500; margin-bottom: 8px; }
+    .wa-setup-row { display: flex; gap: 8px; }
+    .wa-input {
+      flex: 1; background: var(--surface2); border: 1px solid var(--border2); border-radius: var(--rs);
+      padding: 0 10px; height: 34px; color: var(--text); font-size: 12px; font-family: 'DM Mono', monospace; outline: none;
+    }
+    .wa-save-btn {
+      height: 34px; padding: 0 12px; border-radius: var(--rs);
+      background: var(--accent); border: none; cursor: pointer;
+      font-size: 11px; font-weight: 600; color: #0c0c0c; font-family: inherit;
+    }
+
+    /* ── Report ── */
+    .report-box { margin: 12px 20px 0; background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); padding: 14px 16px; }
+    .report-head { display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 500; margin-bottom: 8px; }
+    .report-icon { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); }
+    .report-row { display: flex; gap: 8px; align-items: center; }
+    .report-month {
+      flex: 1; background: var(--surface2); border: 1px solid var(--border2);
+      border-radius: var(--rs); padding: 0 10px; height: 34px;
+      color: var(--text); font-size: 12px; font-family: 'DM Mono', monospace; outline: none;
+    }
+    .report-month::-webkit-calendar-picker-indicator { filter: invert(0.7); }
+    .report-btn {
+      height: 34px; padding: 0 12px; border-radius: var(--rs);
+      background: var(--accent); border: none; cursor: pointer;
+      font-size: 11px; font-weight: 600; color: #0c0c0c; font-family: inherit;
+    }
+    .report-btn:disabled { opacity: .4; cursor: not-allowed; }
+    .report-info { font-size: 10px; color: var(--muted); margin-top: 6px; }
+    .archive-list { margin-top: 8px; display: flex; flex-direction: column; gap: 3px; }
+    .archive-link {
+      display: flex; align-items: center; justify-content: space-between;
+      font-size: 11px; color: var(--accent); text-decoration: none; padding: 3px 0;
+    }
+    .archive-empty { font-size: 10px; color: var(--muted); font-style: italic; margin-top: 6px; }
+
+    /* ── Toast ── */
+    .toast {
+      position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+      background: var(--surface2); border: 1px solid var(--border2);
+      color: var(--text); font-size: 12px; padding: 8px 16px;
+      border-radius: 16px; z-index: 100; opacity: 0; transition: opacity .3s;
+      pointer-events: none; white-space: nowrap;
+    }
+    .toast.show { opacity: 1; }
+  </style>
+</head>
+<body>
+<div class="app">
+  <!-- ═══ AUTH SCREEN ═══ -->
+  <div id="screen-auth" class="auth">
+    <div class="auth-logo">Team <span>Tasks</span></div>
+    <div class="auth-sub">Manage tasks together, simply</div>
+
+    <div class="auth-tabs">
+      <button class="auth-tab active" onclick="authTab('join')">Join team</button>
+      <button class="auth-tab" onclick="authTab('create')">Create team</button>
+    </div>
+
+    <div id="auth-join" class="auth-form">
+      <input class="auth-input" id="join-code" placeholder="Team code (e.g. TASK-7X4K)"/>
+      <input class="auth-input" id="join-name" placeholder="Your name"/>
+      <button class="auth-btn" onclick="joinTeam()">Join</button>
+      <div class="auth-divider">Already joined? Enter your name to log back in</div>
+    </div>
+
+    <div id="auth-create" class="auth-form hidden">
+      <input class="auth-input" id="create-name" placeholder="Team name"/>
+      <input class="auth-input" id="create-leader" placeholder="Your name (leader)"/>
+      <input class="auth-input" id="create-pin" placeholder="Leader PIN (4-6 digits)" type="password" maxlength="6"/>
+      <button class="auth-btn" onclick="createTeam()">Create team</button>
+    </div>
+
+    <div class="auth-err" id="auth-err"></div>
+
+    <div id="auth-leader-pin" class="auth-form hidden" style="margin-top:16px">
+      <div class="auth-divider">Leader login</div>
+      <input class="auth-input" id="leader-pin-input" placeholder="Enter leader PIN" type="password"/>
+      <button class="auth-btn" onclick="leaderLogin()">Login as leader</button>
+    </div>
+  </div>
+
+  <!-- ═══ MAIN SCREEN ═══ -->
+  <div id="screen-main" class="hidden">
+    <div class="header">
+      <div class="header-top">
+        <div class="greeting">Good <span id="tod">day</span></div>
+        <button class="logout-btn" onclick="logout()">Logout</button>
+      </div>
+      <div class="title" id="main-title">My <span>Tasks</span></div>
+      <div class="dateline" id="dateline"></div>
+      <div class="team-info" id="team-info"></div>
+    </div>
+
+    <!-- Leader tabs -->
+    <div id="leader-tabs" class="leader-tabs hidden">
+      <button class="ltab active" onclick="setLeaderView('mine',this)">My tasks</button>
+      <button class="ltab" onclick="setLeaderView('all',this)">All tasks</button>
+      <button class="ltab" onclick="setLeaderView('pending',this)">Pending</button>
+      <button class="ltab" onclick="setLeaderView('settings',this)">Settings</button>
+    </div>
+
+    <div class="stats" id="stats-bar">
+      <div class="stat"><div class="stat-n" id="s-total">—</div><div class="stat-l">Total</div></div>
+      <div class="stat"><div class="stat-n t" id="s-today">—</div><div class="stat-l">Today</div></div>
+      <div class="stat"><div class="stat-n u" id="s-urgent">—</div><div class="stat-l">Urgent</div></div>
+      <div class="stat" id="stat-pending-box"><div class="stat-n p" id="s-pending">—</div><div class="stat-l">Pending</div></div>
+    </div>
+
+    <div class="add-section" id="add-section">
+      <div class="row1">
+        <input class="add-input" id="new-text" placeholder="Add a task…"/>
+        <button class="add-btn" onclick="addTask()">+ Add</button>
+      </div>
+      <div class="row2">
+        <select class="sel" id="new-type" onchange="typeChanged()">
+          <option value="today">Today</option>
+          <option value="date">Pick date</option>
+        </select>
+        <input class="date-inp" type="date" id="new-date"/>
+        <input class="time-inp" type="time" id="new-time"/>
+        <select class="sel hidden" id="assign-to"></select>
+        <label class="urgent-lbl">
+          <input type="checkbox" id="new-urgent"/>
+          <div class="udot"></div>
+          Urgent
+        </label>
+      </div>
+    </div>
+
+    <div class="filters" id="filters-bar">
+      <button class="fbtn active" onclick="setFilter('all',this)">All</button>
+      <button class="fbtn" onclick="setFilter('active',this)">Active</button>
+      <button class="fbtn" onclick="setFilter('today',this)">Today</button>
+      <button class="fbtn" onclick="setFilter('urgent',this)">Urgent</button>
+      <button class="fbtn" onclick="setFilter('done',this)">Done</button>
+    </div>
+
+    <div id="main-list"><div class="empty">Loading…</div></div>
+
+    <!-- Settings (leader only) -->
+    <div id="settings-panel" class="hidden">
+      <div class="settings-box">
+        <div class="settings-head">Team settings</div>
+        <div class="settings-row">
+          <span>Team code</span>
+          <span class="settings-code" id="set-code"></span>
+        </div>
+        <div class="settings-row">
+          <span>Require task approval</span>
+          <div class="toggle" id="toggle-approval" onclick="toggleApproval()"></div>
+        </div>
+        <div class="settings-head" style="margin-top:14px">Members (<span id="member-count">0</span>)</div>
+        <div class="settings-members" id="members-list"></div>
+      </div>
+    </div>
+
+    <!-- WhatsApp number setup -->
+    <div class="wa-setup" id="wa-setup">
+      <div class="wa-setup-head">Your WhatsApp number (for reminders)</div>
+      <div class="wa-setup-row">
+        <input class="wa-input" id="wa-number" placeholder="+919876543210"/>
+        <button class="wa-save-btn" onclick="saveWA()">Save</button>
+      </div>
+    </div>
+
+    <!-- Report -->
+    <div class="report-box">
+      <div class="report-head"><div class="report-icon"></div>Monthly report</div>
+      <div class="report-row">
+        <input class="report-month" type="month" id="report-month"/>
+        <button class="report-btn" id="report-btn" onclick="downloadReport()">CSV</button>
+      </div>
+      <div class="report-info" id="report-info"></div>
+      <div class="archive-list" id="archive-list"></div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ═══ CONFIG — replace with your new Supabase project values ═══
+const SUPABASE_URL = 'https://nmgslisfvgkjsclsunbz.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5tZ3NsaXNmdmdranNjbHN1bmJ6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYzODQ5MzIsImV4cCI6MjA5MTk2MDkzMn0.TS3WkxLI761_85PSt46lpnm--hyPXXxX107LeCCbHDg';
+
+// ═══ STATE ═══
+let S = { team: null, member: null, members: [], tasks: [], filter: 'all', leaderView: 'mine' };
+
+// ═══ HELPERS ═══
+function todayStr() { return new Date().toISOString().slice(0,10); }
+function isOverdue(t) { return !t.done && t.deadline_date && t.deadline_date < todayStr(); }
+function fmtDate(s) {
+  if (!s || s === todayStr()) return 'Today';
+  return new Date(s+'T00:00:00').toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'2-digit'});
+}
+function genCode() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let c = 'TASK-';
+  for (let i = 0; i < 4; i++) c += chars[Math.floor(Math.random()*chars.length)];
+  return c;
+}
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg; el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 2200);
+}
+
+async function api(method, path, body) {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
+    method,
+    headers: {
+      'apikey': SUPABASE_KEY,
+      'Authorization': `Bearer ${SUPABASE_KEY}`,
+      'Content-Type': 'application/json',
+      'Prefer': method === 'POST' ? 'return=representation' : (method === 'PATCH' ? 'return=representation' : 'return=minimal')
+    },
+    body: body ? JSON.stringify(body) : undefined
+  });
+  const txt = await res.text();
+  if (!res.ok) throw new Error(txt);
+  try { return JSON.parse(txt); } catch { return null; }
+}
+
+// ═══ AUTH ═══
+function authTab(tab) {
+  document.querySelectorAll('.auth-tab').forEach((b,i) => b.classList.toggle('active', (tab==='join'?i===0:i===1)));
+  document.getElementById('auth-join').classList.toggle('hidden', tab !== 'join');
+  document.getElementById('auth-create').classList.toggle('hidden', tab !== 'create');
+  document.getElementById('auth-leader-pin').classList.toggle('hidden', true);
+  document.getElementById('auth-err').textContent = '';
+}
+
+async function createTeam() {
+  const name = document.getElementById('create-name').value.trim();
+  const leader = document.getElementById('create-leader').value.trim();
+  const pin = document.getElementById('create-pin').value.trim();
+  const err = document.getElementById('auth-err');
+  if (!name || !leader || !pin) { err.textContent = 'Fill in all fields'; return; }
+  if (pin.length < 4) { err.textContent = 'PIN must be at least 4 digits'; return; }
+  try {
+    const code = genCode();
+    const [team] = await api('POST', 'teams', { name, code, leader_pin: pin });
+    const [member] = await api('POST', 'members', { team_id: team.id, name: leader, role: 'leader' });
+    saveSession(team, member);
+    enterApp();
+  } catch(e) { err.textContent = 'Error: ' + e.message; }
+}
+
+async function joinTeam() {
+  const code = document.getElementById('join-code').value.trim().toUpperCase();
+  const name = document.getElementById('join-name').value.trim();
+  const err = document.getElementById('auth-err');
+  if (!code || !name) { err.textContent = 'Enter team code and your name'; return; }
+  try {
+    const teams = await api('GET', `teams?code=eq.${encodeURIComponent(code)}`);
+    if (!teams || !teams.length) { err.textContent = 'Team not found'; return; }
+    const team = teams[0];
+    // Check if member already exists
+    const existing = await api('GET', `members?team_id=eq.${team.id}&name=eq.${encodeURIComponent(name)}`);
+    let member;
+    if (existing && existing.length) {
+      member = existing[0];
+      if (member.role === 'leader') {
+        // Show PIN input
+        S._pendingTeam = team;
+        S._pendingMember = member;
+        document.getElementById('auth-leader-pin').classList.remove('hidden');
+        err.textContent = 'Leader detected — enter PIN to continue';
+        return;
+      }
+    } else {
+      const [m] = await api('POST', 'members', { team_id: team.id, name, role: 'member' });
+      member = m;
+    }
+    saveSession(team, member);
+    enterApp();
+  } catch(e) { err.textContent = 'Error: ' + e.message; }
+}
+
+async function leaderLogin() {
+  const pin = document.getElementById('leader-pin-input').value.trim();
+  const err = document.getElementById('auth-err');
+  if (!pin) { err.textContent = 'Enter the leader PIN'; return; }
+  if (pin !== S._pendingTeam.leader_pin) { err.textContent = 'Wrong PIN'; return; }
+  saveSession(S._pendingTeam, S._pendingMember);
+  enterApp();
+}
+
+function saveSession(team, member) {
+  S.team = team; S.member = member;
+  localStorage.setItem('tt_session', JSON.stringify({ team_id: team.id, member_id: member.id }));
+}
+
+async function restoreSession() {
+  const raw = localStorage.getItem('tt_session');
+  if (!raw) return false;
+  try {
+    const { team_id, member_id } = JSON.parse(raw);
+    const teams = await api('GET', `teams?id=eq.${team_id}`);
+    const members = await api('GET', `members?id=eq.${member_id}`);
+    if (!teams?.length || !members?.length) { localStorage.removeItem('tt_session'); return false; }
+    S.team = teams[0]; S.member = members[0];
+    return true;
+  } catch { localStorage.removeItem('tt_session'); return false; }
+}
+
+function logout() {
+  localStorage.removeItem('tt_session');
+  S = { team: null, member: null, members: [], tasks: [], filter: 'all', leaderView: 'mine' };
+  document.getElementById('screen-auth').classList.remove('hidden');
+  document.getElementById('screen-main').classList.add('hidden');
+}
+
+// ═══ ENTER APP ═══
+async function enterApp() {
+  document.getElementById('screen-auth').classList.add('hidden');
+  document.getElementById('screen-main').classList.remove('hidden');
+
+  const h = new Date().getHours();
+  document.getElementById('tod').textContent = h < 12 ? 'morning' : h < 17 ? 'afternoon' : 'evening';
+  document.getElementById('dateline').textContent = new Date().toLocaleDateString('en-IN', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
+
+  const isLeader = S.member.role === 'leader';
+  document.getElementById('main-title').innerHTML = isLeader ? 'Team <span>Tasks</span>' : 'My <span>Tasks</span>';
+  document.getElementById('team-info').innerHTML = `${S.team.name} · Code: <code>${S.team.code}</code> · ${isLeader ? 'Leader' : 'Member'}`;
+  document.getElementById('leader-tabs').classList.toggle('hidden', !isLeader);
+  document.getElementById('stat-pending-box').classList.toggle('hidden', !isLeader);
+
+  // Assign dropdown (leader only)
+  const assignSel = document.getElementById('assign-to');
+  assignSel.classList.toggle('hidden', !isLeader);
+
+  // WA number
+  const waInput = document.getElementById('wa-number');
+  if (S.member.whatsapp_number) waInput.value = S.member.whatsapp_number.replace('whatsapp:','');
+
+  // Report month default
+  const now = new Date();
+  document.getElementById('report-month').value = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+
+  await loadMembers();
+  await loadTasks();
+  loadArchives();
+}
+
+// ═══ DATA LOADING ═══
+async function loadMembers() {
+  S.members = await api('GET', `members?team_id=eq.${S.team.id}&order=created_at.asc`) || [];
+  // Update assign dropdown
+  const sel = document.getElementById('assign-to');
+  sel.innerHTML = S.members.map(m =>
+    `<option value="${m.id}" ${m.id === S.member.id ? 'selected':''}>${m.name}</option>`
+  ).join('');
+  // Update settings members list
+  renderMembers();
+}
+
+async function loadTasks() {
+  try {
+    S.tasks = await api('GET', `tasks?team_id=eq.${S.team.id}&order=deadline_date.asc,created_at.desc`) || [];
+    render();
+  } catch(e) {
+    document.getElementById('main-list').innerHTML = `<div class="empty">Error: ${e.message}</div>`;
+  }
+}
+
+// ═══ TASK ACTIONS ═══
+async function addTask() {
+  const text = document.getElementById('new-text').value.trim();
+  if (!text) return;
+  const type = document.getElementById('new-type').value;
+  const urgent = document.getElementById('new-urgent').checked;
+  const time = document.getElementById('new-time').value || null;
+  const isLeader = S.member.role === 'leader';
+  const assignTo = isLeader ? document.getElementById('assign-to').value : S.member.id;
+  let deadline_date = todayStr();
+  if (type === 'date') deadline_date = document.getElementById('new-date').value || todayStr();
+
+  const approved = S.team.approval_required ? isLeader : true;
+  const payload = {
+    team_id: S.team.id, created_by: S.member.id, assigned_to: assignTo,
+    text, urgent, deadline_type: type, deadline_date, done: false,
+    approved, reminder_sent: false
+  };
+  if (type === 'today' && time) payload.deadline_time = time;
+
+  document.getElementById('new-text').value = '';
+  document.getElementById('new-urgent').checked = false;
+  try {
+    const [r] = await api('POST', 'tasks', payload);
+    S.tasks.unshift(r);
+    render();
+    toast(approved ? 'Added' : 'Added (pending approval)');
+  } catch(e) { toast('Error: ' + e.message); }
+}
+
+async function toggleTask(id) {
+  const t = S.tasks.find(x => x.id === id);
+  if (!t) return;
+  t.done = !t.done; render();
+  try { await api('PATCH', `tasks?id=eq.${id}`, { done: t.done }); }
+  catch(e) { t.done = !t.done; render(); }
+}
+
+async function delTask(id) {
+  S.tasks = S.tasks.filter(x => x.id !== id); render();
+  try { await api('DELETE', `tasks?id=eq.${id}`); toast('Deleted'); }
+  catch(e) { loadTasks(); }
+}
+
+async function approveTask(id) {
+  const t = S.tasks.find(x => x.id === id);
+  if (t) { t.approved = true; render(); }
+  try { await api('PATCH', `tasks?id=eq.${id}`, { approved: true }); toast('Approved'); }
+  catch(e) { loadTasks(); }
+}
+
+async function rejectTask(id) {
+  S.tasks = S.tasks.filter(x => x.id !== id); render();
+  try { await api('DELETE', `tasks?id=eq.${id}`); toast('Rejected'); }
+  catch(e) { loadTasks(); }
+}
+
+// ═══ UI CONTROLS ═══
+function typeChanged() {
+  const v = document.getElementById('new-type').value;
+  document.getElementById('new-date').classList.toggle('show', v === 'date');
+  document.getElementById('new-time').classList.toggle('show', v === 'today');
+}
+
+function setFilter(f, btn) {
+  S.filter = f;
+  document.querySelectorAll('.fbtn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  render();
+}
+
+function setLeaderView(view, btn) {
+  S.leaderView = view;
+  document.querySelectorAll('.ltab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  const showTaskUI = view !== 'settings';
+  document.getElementById('stats-bar').classList.toggle('hidden', !showTaskUI);
+  document.getElementById('add-section').classList.toggle('hidden', !showTaskUI);
+  document.getElementById('filters-bar').classList.toggle('hidden', !showTaskUI);
+  document.getElementById('main-list').classList.toggle('hidden', !showTaskUI);
+  document.getElementById('settings-panel').classList.toggle('hidden', view !== 'settings');
+  if (showTaskUI) render();
+  if (view === 'settings') renderSettings();
+}
+
+// ═══ RENDER ═══
+function getVisibleTasks() {
+  const isLeader = S.member.role === 'leader';
+  let pool = S.tasks;
+  // Scope by leader view
+  if (isLeader) {
+    if (S.leaderView === 'mine') pool = pool.filter(t => t.assigned_to === S.member.id);
+    else if (S.leaderView === 'pending') pool = pool.filter(t => !t.approved);
+    // 'all' = everything
+  } else {
+    pool = pool.filter(t => t.assigned_to === S.member.id);
+  }
+  // Apply filter
+  if (S.filter === 'active') pool = pool.filter(t => !t.done && t.approved);
+  else if (S.filter === 'today') pool = pool.filter(t => t.deadline_date === todayStr() && t.approved);
+  else if (S.filter === 'urgent') pool = pool.filter(t => t.urgent && !t.done && t.approved);
+  else if (S.filter === 'done') pool = pool.filter(t => t.done);
+  return pool;
+}
+
+function render() {
+  const isLeader = S.member.role === 'leader';
+  const myTasks = S.tasks.filter(t => t.assigned_to === S.member.id);
+  const allActive = S.tasks.filter(t => !t.done && t.approved);
+
+  // Stats
+  const scopedTasks = (isLeader && S.leaderView !== 'mine') ? S.tasks : myTasks;
+  const scopedActive = scopedTasks.filter(t => !t.done && t.approved);
+  document.getElementById('s-total').textContent = scopedTasks.filter(t => t.approved).length;
+  document.getElementById('s-today').textContent = scopedActive.filter(t => t.deadline_date === todayStr()).length;
+  document.getElementById('s-urgent').textContent = scopedActive.filter(t => t.urgent).length;
+  if (isLeader) document.getElementById('s-pending').textContent = S.tasks.filter(t => !t.approved).length;
+
+  const vis = getVisibleTasks();
+  const el = document.getElementById('main-list');
+  if (!vis.length) { el.innerHTML = '<div class="empty">No tasks here</div>'; return; }
+
+  const showMemberName = isLeader && (S.leaderView === 'all' || S.leaderView === 'pending');
+
+  // Group
+  const groups = [
+    { key:'pending', label:'Pending approval', color:'var(--pending-c)', items: vis.filter(t => !t.approved) },
+    { key:'overdue', label:'Overdue', color:'var(--overdue-c)', items: vis.filter(t => t.approved && isOverdue(t)) },
+    { key:'today', label:'Today', color:'var(--today-c)', items: vis.filter(t => t.approved && !isOverdue(t) && !t.done && t.deadline_date === todayStr()) },
+    { key:'dated', label:'Scheduled', color:'var(--dated-c)', items: vis.filter(t => t.approved && !isOverdue(t) && !t.done && t.deadline_type === 'date' && t.deadline_date !== todayStr()) },
+    { key:'done', label:'Done', color:'var(--done-c)', items: vis.filter(t => t.done) },
+  ];
+
+  let html = '';
+  for (const g of groups) {
+    if (!g.items.length) continue;
+    html += `<div class="sec-head">
+      <div class="sec-dot" style="background:${g.color}"></div>
+      <span class="sec-lbl" style="color:${g.color}">${g.label}</span>
+      <span class="sec-cnt">${g.items.length}</span>
+    </div><div class="tlist">${g.items.map(t => taskHTML(t, showMemberName)).join('')}</div>`;
+  }
+  el.innerHTML = html || '<div class="empty">No tasks here</div>';
+}
+
+function taskHTML(t, showMemberName) {
+  const overdue = isOverdue(t);
+  const isPending = !t.approved;
+  const isLeader = S.member.role === 'leader';
+  const cls = [
+    t.done ? 'is-done' : '',
+    t.urgent && !t.done && !isPending ? 'is-urgent' : '',
+    overdue && !isPending ? 'is-overdue' : '',
+    isPending ? 'is-pending' : ''
+  ].filter(Boolean).join(' ');
+
+  const memberName = showMemberName ? getMemberName(t.assigned_to) : '';
+
+  let actions = `<button class="act-btn del" onclick="delTask('${t.id}')" title="Delete">×</button>`;
+  if (isPending && isLeader) {
+    actions = `<button class="act-btn approve" onclick="approveTask('${t.id}')" title="Approve">✓</button>
+               <button class="act-btn reject" onclick="rejectTask('${t.id}')" title="Reject">×</button>`;
+  }
+
+  return `<div class="task ${cls}">
+    <div class="chk${t.done?' on':''}" onclick="toggleTask('${t.id}')"></div>
+    <div class="task-body">
+      <div class="task-text">${t.text}</div>
+      <div class="task-meta">
+        ${isPending ? '<span class="badge badge-pending">Pending</span>' : ''}
+        ${t.urgent && !t.done && !isPending ? '<span class="badge badge-urgent">Urgent</span>' : ''}
+        ${overdue && !isPending ? '<span class="badge badge-overdue">Overdue</span>' : ''}
+        ${!overdue && t.deadline_date && !isPending ? `<span class="badge badge-date">${fmtDate(t.deadline_date)}</span>` : ''}
+        ${t.deadline_time ? `<span class="badge badge-time">${t.deadline_time.slice(0,5)}</span>` : ''}
+        ${memberName ? `<span class="badge badge-member">${memberName}</span>` : ''}
+      </div>
+    </div>
+    <div class="task-actions">${actions}</div>
+  </div>`;
+}
+
+function getMemberName(id) {
+  const m = S.members.find(x => x.id === id);
+  return m ? m.name : '?';
+}
+
+// ═══ SETTINGS (leader) ═══
+function renderSettings() {
+  document.getElementById('set-code').textContent = S.team.code;
+  const toggle = document.getElementById('toggle-approval');
+  toggle.classList.toggle('on', S.team.approval_required);
+  renderMembers();
+}
+
+function renderMembers() {
+  const el = document.getElementById('members-list');
+  document.getElementById('member-count').textContent = S.members.length;
+  el.innerHTML = S.members.map(m => `
+    <div class="member-row">
+      <span class="member-name">${m.name}</span>
+      <span class="member-role">${m.role}</span>
+      <span class="member-wa">${m.whatsapp_number ? m.whatsapp_number.replace('whatsapp:','') : 'no WA'}</span>
+    </div>
+  `).join('');
+}
+
+async function toggleApproval() {
+  S.team.approval_required = !S.team.approval_required;
+  document.getElementById('toggle-approval').classList.toggle('on', S.team.approval_required);
+  try {
+    await api('PATCH', `teams?id=eq.${S.team.id}`, { approval_required: S.team.approval_required });
+    toast(S.team.approval_required ? 'Approval required' : 'Approval off');
+  } catch(e) { S.team.approval_required = !S.team.approval_required; toast('Error'); }
+}
+
+// ═══ WHATSAPP NUMBER ═══
+async function saveWA() {
+  const raw = document.getElementById('wa-number').value.trim();
+  if (!raw) { toast('Enter a number'); return; }
+  const num = raw.startsWith('+') ? raw : '+' + raw;
+  const waNum = 'whatsapp:' + num;
+  try {
+    await api('PATCH', `members?id=eq.${S.member.id}`, { whatsapp_number: waNum });
+    S.member.whatsapp_number = waNum;
+    toast('WhatsApp number saved');
+    loadMembers();
+  } catch(e) { toast('Error: ' + e.message); }
+}
+
+// ═══ REPORTS ═══
+function csvEscape(str) {
+  if (!str) return '';
+  if (str.includes(',') || str.includes('"') || str.includes('\n')) return '"'+str.replace(/"/g,'""')+'"';
+  return str;
+}
+
+async function downloadReport() {
+  const btn = document.getElementById('report-btn');
+  const info = document.getElementById('report-info');
+  const monthVal = document.getElementById('report-month').value;
+  if (!monthVal) { toast('Pick a month'); return; }
+  const [year, month] = monthVal.split('-').map(Number);
+  const startDate = `${year}-${String(month).padStart(2,'0')}-01`;
+  const nm = month === 12 ? 1 : month + 1;
+  const ny = month === 12 ? year + 1 : year;
+  const endDate = `${ny}-${String(nm).padStart(2,'0')}-01`;
+
+  btn.disabled = true; info.textContent = 'Fetching…';
+  try {
+    let query = `tasks?team_id=eq.${S.team.id}&deadline_date=gte.${startDate}&deadline_date=lt.${endDate}&order=deadline_date.asc`;
+    if (S.member.role !== 'leader') query += `&assigned_to=eq.${S.member.id}`;
+    const rows = await api('GET', query);
+    if (!rows || !rows.length) { info.textContent = 'No tasks for this month.'; btn.disabled = false; return; }
+
+    const headers = ['Task','Assigned to','Status','Urgent','Type','Date','Time','Created'];
+    const csvRows = [headers.join(',')];
+    for (const t of rows) {
+      csvRows.push([
+        csvEscape(t.text), csvEscape(getMemberName(t.assigned_to)),
+        t.done ? 'Done' : (t.approved ? 'Pending' : 'Unapproved'),
+        t.urgent ? 'Yes' : 'No', t.deadline_type === 'today' ? 'Today' : 'Scheduled',
+        t.deadline_date || '', t.deadline_time ? t.deadline_time.slice(0,5) : '',
+        t.created_at ? t.created_at.slice(0,16).replace('T',' ') : ''
+      ].join(','));
+    }
+    const blob = new Blob([csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url;
+    const mn = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    const suffix = S.member.role === 'leader' ? 'ALL' : S.member.name;
+    a.download = `tasks-${suffix}-${mn[month-1]}-${year}.csv`;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    const done = rows.filter(r => r.done).length;
+    info.textContent = `${rows.length} tasks — ${done} done, ${rows.length - done} pending`;
+  } catch(e) { info.textContent = 'Error: ' + e.message; }
+  btn.disabled = false;
+}
+
+async function loadArchives() {
+  const el = document.getElementById('archive-list');
+  try {
+    const res = await fetch(`${SUPABASE_URL}/storage/v1/object/list/reports`, {
+      headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` },
+      method: 'POST',
+      body: JSON.stringify({ prefix: '', limit: 100, offset: 0, sortBy: { column: 'name', order: 'desc' } })
+    });
+    if (!res.ok) throw new Error(`${res.status}`);
+    const files = await res.json();
+    const csvFiles = (files || []).filter(f => f.name && f.name.endsWith('.csv'));
+    if (!csvFiles.length) { el.innerHTML = '<div class="archive-empty">No archived reports yet.</div>'; return; }
+    el.innerHTML = csvFiles.map(f => {
+      const url = `${SUPABASE_URL}/storage/v1/object/public/reports/${f.name}`;
+      return `<a class="archive-link" href="${url}" download="${f.name}">${f.name.replace('.csv','')}</a>`;
+    }).join('');
+  } catch(e) { el.innerHTML = '<div class="archive-empty">Could not load archives.</div>'; }
+}
+
+// ═══ INIT ═══
+document.getElementById('new-text').addEventListener('keydown', e => { if (e.key === 'Enter') addTask(); });
+
+(async function init() {
+  if (await restoreSession()) {
+    enterApp();
+  }
+})();
+</script>
+</body>
+</html>

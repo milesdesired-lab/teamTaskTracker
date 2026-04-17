@@ -1,0 +1,10 @@
+{
+  "name": "Team Tasks",
+  "short_name": "Tasks",
+  "description": "Team task tracker with approval workflow",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0c0c0c",
+  "theme_color": "#0c0c0c",
+  "orientation": "portrait"
+}
