@@ -370,7 +370,7 @@
     </div>
 
     <!-- WhatsApp number setup -->
-    <div class="wa-setup" id="wa-setup">
+    <div class="wa-setup hidden" id="wa-setup">
       <div class="wa-setup-head">Your WhatsApp number (for reminders)</div>
       <div class="wa-setup-row">
         <input class="wa-input" id="wa-number" placeholder="+919876543210"/>
@@ -455,7 +455,7 @@ async function createTeam() {
   try {
     const code = genCode();
     const [team] = await api('POST', 'teams', { name, code, leader_pin: pin });
-    const [member] = await api('POST', 'members', { team_id: team.id, name: leader, role: 'leader' });
+    const [member] = await api('POST', 'members?select=id,team_id,name,role,created_at', { team_id: team.id, name: leader, role: 'leader' });
     saveSession(team, member);
     enterApp();
   } catch(e) { err.textContent = 'Error: ' + e.message; }
@@ -471,7 +471,7 @@ async function joinTeam() {
     if (!teams || !teams.length) { err.textContent = 'Team not found'; return; }
     const team = teams[0];
     // Check if member already exists
-    const existing = await api('GET', `members?team_id=eq.${team.id}&name=eq.${encodeURIComponent(name)}`);
+    const existing = await api('GET', `members?team_id=eq.${team.id}&name=eq.${encodeURIComponent(name)}&select=id,team_id,name,role,created_at`);
     let member;
     if (existing && existing.length) {
       member = existing[0];
@@ -484,7 +484,7 @@ async function joinTeam() {
         return;
       }
     } else {
-      const [m] = await api('POST', 'members', { team_id: team.id, name, role: 'member' });
+      const [m] = await api('POST', 'members?select=id,team_id,name,role,created_at', { team_id: team.id, name, role: 'member' });
       member = m;
     }
     saveSession(team, member);
@@ -512,7 +512,7 @@ async function restoreSession() {
   try {
     const { team_id, member_id } = JSON.parse(raw);
     const teams = await api('GET', `teams?id=eq.${team_id}`);
-    const members = await api('GET', `members?id=eq.${member_id}`);
+    const members = await api('GET', `members?id=eq.${member_id}&select=id,team_id,name,role,created_at`);
     if (!teams?.length || !members?.length) { localStorage.removeItem('tt_session'); return false; }
     S.team = teams[0]; S.member = members[0];
     return true;
@@ -560,7 +560,7 @@ async function enterApp() {
 
 // ═══ DATA LOADING ═══
 async function loadMembers() {
-  S.members = await api('GET', `members?team_id=eq.${S.team.id}&order=created_at.asc`) || [];
+  S.members = await api('GET', `members?team_id=eq.${S.team.id}&select=id,team_id,name,role,created_at&order=created_at.asc`) || [];
   // Update assign dropdown
   const sel = document.getElementById('assign-to');
   sel.innerHTML = S.members.map(m =>
@@ -798,14 +798,8 @@ async function toggleApproval() {
 async function saveWA() {
   const raw = document.getElementById('wa-number').value.trim();
   if (!raw) { toast('Enter a number'); return; }
-  const num = raw.startsWith('+') ? raw : '+' + raw;
-  const waNum = 'whatsapp:' + num;
-  try {
-    await api('PATCH', `members?id=eq.${S.member.id}`, { whatsapp_number: waNum });
-    S.member.whatsapp_number = waNum;
-    toast('WhatsApp number saved');
-    loadMembers();
-  } catch(e) { toast('Error: ' + e.message); }
+  // Disabled for privacy: phone numbers are no longer stored.
+  toast('Phone number saving is disabled.');
 }
 
 // ═══ REPORTS ═══
